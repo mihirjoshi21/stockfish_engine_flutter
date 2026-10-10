@@ -1,0 +1,68 @@
+stockfish_engine_flutter
+Copyright (C) 2026 Mihir Joshi and contributors
+Licensed under the GNU General Public License, version 3 (see LICENSE).
+
+This package is a modified version of other free software. The notices below
+satisfy the "prominent notices" requirement of GPLv3 section 5(a).
+
+--------------------------------------------------------------------------
+1. Stockfish (ios/Stockfish/src, except incbin/)
+--------------------------------------------------------------------------
+Stockfish, a UCI chess playing engine derived from Glaurung 2.1
+Copyright (C) 2004-2026 The Stockfish developers (see the AUTHORS file of
+https://github.com/official-stockfish/Stockfish)
+Licensed under GPLv3 or later.
+
+The sources in this repository are NOT an unmodified upstream release. They are
+a development snapshot (reported build SHA cbdc8df9, build date 2026-07-14) that
+was vendored by the original `stockfish` Flutter plugin, then edited locally
+by Mihir Joshi (the version string in src/misc.cpp is "dev-mihir-optimized").
+The snapshot differs from the upstream `sf_18` tag in about 37 source files;
+part of that is ordinary upstream development after sf_18 and part is local
+editing, and the two have not been separated. A line-exact record of those local edits was
+not kept before this repository was created; the diff against upstream can be
+reproduced with `diff -r` against the corresponding upstream commit, and any
+further changes are tracked in this repository's git history.
+
+--------------------------------------------------------------------------
+2. `stockfish` Flutter plugin 1.8.1
+--------------------------------------------------------------------------
+https://github.com/ArjanAswal/stockfish
+Copyright (C) Arjan Aswal. Licensed under GPLv3 (the plugin changed its license
+from MIT to GPL in version 1.3.0; its podspec still said MIT, which was
+incorrect and is fixed here).
+
+Taken from it: ios/FlutterStockfish (FFI bridge), ios/Classes, the podspec
+structure, lib/src (Dart API), the example app.
+
+--------------------------------------------------------------------------
+3. incbin (ios/Stockfish/src/incbin)
+--------------------------------------------------------------------------
+By Dale Weiler, public domain / Unlicense (see incbin/UNLICENCE).
+
+--------------------------------------------------------------------------
+4. Modifications made in this package relative to `stockfish` 1.8.1
+--------------------------------------------------------------------------
+* Renamed the package to `stockfish_engine_flutter` (library entry point is
+  `package:stockfish_engine_flutter/stockfish_engine_flutter.dart`), version
+  0.1.0, new repository, Dart 3 SDK constraint.
+* Android: Stockfish is no longer loaded as a JNI/FFI shared library
+  (`libstockfish.so`). It is built as an executable named `libstockfish_bin.so`
+  (android/CMakeLists.txt, `add_executable`), started from `nativeLibraryDir`
+  with `Process.start` and driven over stdin/stdout. `ios/FlutterStockfish/ffi.cpp`
+  is no longer compiled for Android.
+* Android: added `android:extractNativeLibs="true"` to the plugin manifest and
+  a `nativeLibraryDir` method channel (StockfishPlugin.java).
+* Android: CMake now reads the NNUE file names from `evaluate.h`, downloads
+  missing networks and verifies their SHA-256 prefix (the previous CMake file
+  downloaded two obsolete network names that were never used).
+* iOS: podspec license corrected from MIT to GPL-3.0, authors/homepage updated,
+  and the nnue download script phases updated to the networks that
+  `evaluate.h` actually requires (nn-7bf13f9655c8, nn-47fc8b7fff06). The FFI
+  path itself is unchanged. The podspec is now `stockfish_engine_flutter.podspec`.
+* macOS (dev path): the bundled prebuilt-binary asset mechanism was removed;
+  the engine is built from the package sources (networks fetched with curl).
+* Dart: `Stockfish` selects the process backend on Android and macOS and the
+  FFI backend on iOS; the public API (state, stdin setter, stdout stream,
+  dispose, stockfishAsync) is unchanged.
+* Removed build artifacts and the prebuilt macOS binary from the tree.

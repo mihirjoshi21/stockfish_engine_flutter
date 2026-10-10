@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Stockfish runs as a separate process: it is built as an executable named
+      libstockfish_bin.so and spawned from nativeLibraryDir. That directory only
+      contains the file if the installer extracts native libraries, so this
+      must be "true" (it is merged into the host app's manifest).
+      NOTE: Android Gradle Plugin 8+ overrides this attribute from the app's
+      `packaging.jniLibs.useLegacyPackaging` setting, so the host app must ALSO
+      set that to true (see README).
+    -->
+    <application android:extractNativeLibs="true" />
+</manifest>

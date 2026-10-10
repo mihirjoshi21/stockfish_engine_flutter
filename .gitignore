@@ -1,0 +1,29 @@
+.dart_tool/
+.packages
+pubspec.lock
+build/
+.gradle/
+.cxx/
+.externalNativeBuild/
+.DS_Store
+*.o
+*.iml
+.idea/
+
+# Stockfish NNUE networks are downloaded at build time (see README)
+*.nnue
+
+# Locally built desktop binary (macOS development path)
+/ios/Stockfish/src/stockfish
+
+# Flutter-generated files in the example app
+example/ios/Flutter/ephemeral/
+example/ios/Flutter/Generated.xcconfig
+example/ios/Flutter/flutter_export_environment.sh
+example/ios/Runner/GeneratedPluginRegistrant.*
+example/android/local.properties
+example/android/**/GeneratedPluginRegistrant.java
+example/.flutter-plugins-dependencies
+example/.dart_tool/
+example/pubspec.lock
+example/ios/Pods/

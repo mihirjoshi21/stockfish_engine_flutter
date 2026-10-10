@@ -1,0 +1,26 @@
+name: stockfish_example
+description: Demonstrates how to use the stockfish_engine_flutter plugin.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  logging: ^1.0.0
+  stockfish_engine_flutter:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
