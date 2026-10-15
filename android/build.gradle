@@ -4,34 +4,36 @@ version '1.0'
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
+        // AGP 9.x / Gradle 9.x (jcenter() was removed in Gradle 9).
+        classpath 'com.android.tools.build:gradle:9.1.1'
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 
 apply plugin: 'com.android.library'
 
 android {
-    // add support for both AGP v8 and older versions
-    // https://github.com/flutter/flutter/issues/125621#issuecomment-1525995461
-    if (project.android.hasProperty("namespace")) {
-        namespace 'com.arjanaswal.stockfish'
+    namespace 'com.arjanaswal.stockfish'
+
+    compileSdk 37
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    compileSdkVersion 35
-
     defaultConfig {
-        minSdkVersion 21
+        minSdk 21
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
         }
@@ -41,7 +43,7 @@ android {
             }
         }
     }
-    lintOptions {
+    lint {
         disable 'InvalidPackage'
     }
     externalNativeBuild {
