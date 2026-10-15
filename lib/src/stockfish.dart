@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 
+import 'android_executable.dart';
 import 'ffi.dart';
 import 'stockfish_state.dart';
 
@@ -15,11 +16,6 @@ final _logger = Logger('Stockfish');
 
 /// Channel implemented by the Android plugin (StockfishPlugin.java).
 const _channel = MethodChannel('stockfish_engine_flutter');
-
-/// Name of the Stockfish executable shipped in `nativeLibraryDir` on Android.
-/// It is a PIE executable (not a shared library) that only has a `lib*.so`
-/// name so the package installer extracts it. See android/CMakeLists.txt.
-const _androidExecutableName = 'libstockfish_bin.so';
 
 void _debugLog(String message) {
   debugPrint('[STOCKFISH] $message');
@@ -35,7 +31,9 @@ bool get _usesProcessBackend =>
 
 /// A wrapper for the Stockfish engine.
 ///
-/// * Android: separate process (`libstockfish_bin.so` in `nativeLibraryDir`).
+/// * Android: separate process (`libstockfish_bin.so` or
+///   `libstockfish_bin_compat.so` in `nativeLibraryDir`, chosen from
+///   `/proc/cpuinfo`; the NNUE nets live in `libstockfish_nets.so`).
 /// * macOS: separate process (bundled or locally built binary).
 /// * iOS: in-process through Dart FFI.
 class Stockfish {
@@ -226,16 +224,19 @@ extension on Stockfish {
           process = await testLauncher();
         } else if (Platform.isAndroid) {
           final dir = await _androidNativeLibraryDir();
-          final path = '$dir/$_androidExecutableName';
-          if (!await File(path).exists()) {
-            throw StateError(
-              '$path does not exist. The app must be installed with '
-              'android:extractNativeLibs="true" so the Stockfish executable '
-              'is extracted to nativeLibraryDir.',
-            );
-          }
+          final path = await _androidExecutablePath(dir);
+          // libstockfish_nets.so (DT_NEEDED) is found through the executable's
+          // DT_RUNPATH=$ORIGIN; LD_LIBRARY_PATH is a belt-and-braces fallback.
+          final inherited = Platform.environment['LD_LIBRARY_PATH'];
+          final libraryPath = inherited == null || inherited.isEmpty
+              ? dir
+              : '$dir:$inherited';
           _debugLog('Launching Stockfish executable at $path');
-          process = await Process.start(path, const []);
+          process = await Process.start(
+            path,
+            const [],
+            environment: {'LD_LIBRARY_PATH': libraryPath},
+          );
         } else {
           final executable = await _ensureMacOSExecutable();
           _debugLog('Launching Stockfish executable at ${executable.path}');
@@ -299,6 +300,39 @@ Future<String> _androidNativeLibraryDir() async {
     throw StateError('The plugin did not return nativeLibraryDir');
   }
   return dir;
+}
+
+/// Picks the engine build for this CPU (see android_executable.dart): the
+/// dot-product build only if every `Features` line of /proc/cpuinfo has
+/// `asimddp`, else the compat build; falls back to whichever one exists.
+Future<String> _androidExecutablePath(String dir) async {
+  String cpuinfo;
+  try {
+    cpuinfo = await File('/proc/cpuinfo').readAsString();
+  } catch (error) {
+    _debugLog('Could not read /proc/cpuinfo ($error); assuming no dotprod');
+    cpuinfo = '';
+  }
+  final preference = androidExecutablePreference(cpuinfo);
+  final name = selectAndroidExecutable(
+    cpuinfo,
+    (name) => File('$dir/$name').existsSync(),
+  );
+  if (name == null) {
+    throw StateError(
+      '$dir/${preference.first} does not exist. The app must be installed '
+      'with android:extractNativeLibs="true" so the Stockfish executable '
+      'is extracted to nativeLibraryDir.',
+    );
+  }
+  final fallback = name == preference.first
+      ? ''
+      : ' (fallback: ${preference.first} is missing)';
+  _debugLog(
+    'CPU has dotprod (asimddp on every core): ${cpuinfoHasDotProd(cpuinfo)}; '
+    'using $name$fallback',
+  );
+  return '$dir/$name';
 }
 
 Future<File> _ensureMacOSExecutable() async {

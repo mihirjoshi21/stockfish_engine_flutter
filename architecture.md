@@ -1,8 +1,26 @@
 > **Note (stockfish_engine_flutter 0.1.0):** this document describes the original
 > FFI design, which is now used on **iOS only**. On **Android** the engine is an
-> executable (`libstockfish_bin.so`) started with `Process.start` from
-> `nativeLibraryDir`; `ffi.cpp`, the isolates and `ffi.dart` are not involved there.
-> See README.md and NOTICE.
+> executable started with `Process.start` from `nativeLibraryDir`; `ffi.cpp`,
+> the isolates and `ffi.dart` are not involved there. See README.md and NOTICE.
+>
+> **Android layout** (android/CMakeLists.txt): per ABI, `libstockfish_nets.so` is
+> a real shared library containing only the two NNUE networks
+> (android/stockfish_nets.cpp, incbin). The engine executables are compiled with
+> `-DSTOCKFISH_EXTERNAL_NETS` (network.cpp then uses `INCBIN_EXTERN`), reach the
+> net symbols through the GOT (no copy relocations; bionic has none), have
+> `DT_NEEDED libstockfish_nets.so` and `DT_RUNPATH $ORIGIN`. arm64-v8a release
+> builds produce `libstockfish_bin.so` (`-march=armv8.2-a+dotprod
+> -DUSE_NEON_DOTPROD`) and `libstockfish_bin_compat.so` (plain `-DUSE_NEON=8`);
+> other ABIs and debug builds produce only `libstockfish_bin.so`.
+> lib/src/android_executable.dart picks the dotprod build only if every
+> `Features` line of `/proc/cpuinfo` lists `asimddp`, otherwise the compat
+> build, falling back to whichever exists; the process is started with
+> `LD_LIBRARY_PATH=<nativeLibraryDir>`.
+>
+> **iOS Release flags** no longer include `-flto=full` (LTO breaks the
+> `.incbin` include-path lookup) or the dot-product flags (statically linked, no
+> runtime dispatch, and A11-and-older devices lack the extension). The code
+> excerpts of the podspec further down are historical.
 
 # Stockfish Flutter Package - Deep Dive
 

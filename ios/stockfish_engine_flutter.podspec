@@ -67,12 +67,19 @@ Pod::Spec.new do |s|
       :script => fetch_net.call('nn-47fc8b7fff06.nnue')
     },
   ]
+  # Release flags, deliberately WITHOUT:
+  # * -flto=full: with LTO the `.incbin` of the NNUE nets is assembled at link
+  #   time without the -I search path, failing with "Could not find incbin
+  #   file 'nn-....nnue'".
+  # * -march=armv8.2-a+dotprod / -DUSE_NEON_DOTPROD: Stockfish is linked
+  #   statically into the app, so there is no runtime dispatch, and A11/A12
+  #   iPhones (8, X, XS, XR) on iOS 16-18 lack the dot-product extension.
   s.xcconfig = {
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
     'CLANG_CXX_LIBRARY' => 'libc++',
     'OTHER_CPLUSPLUSFLAGS[config=Debug]' => '$(inherited) -std=c++17 -DUSE_PTHREADS -DIS_64BIT -DUSE_POPCNT -I"${PODS_TARGET_SRCROOT}/Stockfish/src"',
     'OTHER_LDFLAGS[config=Debug]' => '$(inherited) -std=c++17 -DUSE_PTHREADS -DIS_64BIT -DUSE_POPCNT',
-    'OTHER_CPLUSPLUSFLAGS[config=Release]' => '$(inherited) -fno-exceptions -std=c++17 -DUSE_PTHREADS -DNDEBUG -O3 -DIS_64BIT -DUSE_POPCNT -DUSE_NEON=8 -DUSE_NEON_DOTPROD -march=armv8.2-a+dotprod -flto=full -I"${PODS_TARGET_SRCROOT}/Stockfish/src"',
-    'OTHER_LDFLAGS[config=Release]' => '$(inherited) -fno-exceptions -std=c++17 -DUSE_PTHREADS -DNDEBUG -O3 -DIS_64BIT -DUSE_POPCNT -DUSE_NEON=8 -DUSE_NEON_DOTPROD -march=armv8.2-a+dotprod -flto=full'
+    'OTHER_CPLUSPLUSFLAGS[config=Release]' => '$(inherited) -fno-exceptions -std=c++17 -DUSE_PTHREADS -DNDEBUG -O3 -DIS_64BIT -DUSE_POPCNT -DUSE_NEON=8 -I"${PODS_TARGET_SRCROOT}/Stockfish/src"',
+    'OTHER_LDFLAGS[config=Release]' => '$(inherited) -fno-exceptions -std=c++17 -DUSE_PTHREADS -DNDEBUG -O3 -DIS_64BIT -DUSE_POPCNT -DUSE_NEON=8'
   }
 end
