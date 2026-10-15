@@ -43,7 +43,13 @@
 //     const unsigned char *const gEmbeddedNNUEEnd;     // a marker to the end
 //     const unsigned int         gEmbeddedNNUESize;    // the size of the embedded file
 // Note that this does not work in Microsoft Visual Studio.
-#if !defined(_MSC_VER) && !defined(NNUE_EMBEDDING_OFF)
+#if defined(STOCKFISH_EXTERNAL_NETS)
+// stockfish_engine_flutter (Android): the nets are embedded once in a separate
+// shared library (android/stockfish_nets.cpp -> libstockfish_nets.so) that is
+// shared by several engine executables; only reference the symbols here.
+INCBIN_EXTERN(EmbeddedNNUEBig);
+INCBIN_EXTERN(EmbeddedNNUESmall);
+#elif !defined(_MSC_VER) && !defined(NNUE_EMBEDDING_OFF)
 INCBIN(EmbeddedNNUEBig, EvalFileDefaultNameBig);
 INCBIN(EmbeddedNNUESmall, EvalFileDefaultNameSmall);
 #else

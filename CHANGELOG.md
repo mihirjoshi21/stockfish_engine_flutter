@@ -4,6 +4,16 @@ Fork of `stockfish` 1.8.1 by Arjan Aswal, published as `stockfish_engine_flutter
 
 * Android: run Stockfish as a separate process (`libstockfish_bin.so` in
   `nativeLibraryDir`) instead of a JNI/FFI shared library.
+* Android: the NNUE networks are embedded once in a shared library,
+  `libstockfish_nets.so`; the engine executables link against it. arm64-v8a
+  release builds ship two executables, `libstockfish_bin.so` (dot product) and
+  `libstockfish_bin_compat.so` (no dot product, for Cortex-A53/A72/A73-class
+  CPUs that crashed with SIGILL). The Dart side uses the dotprod build only if
+  every `Features` line of `/proc/cpuinfo` has `asimddp`, and falls back to the
+  other file if the chosen one is missing.
+* iOS: Release build no longer uses `-flto=full` (fixes "Could not find incbin
+  file 'nn-….nnue'") nor `-march=armv8.2-a+dotprod` / `USE_NEON_DOTPROD`
+  (A11-and-older devices have no dot product).
 * Fix podspec license (GPL-3.0, was MIT) and the NNUE downloads.
 * See NOTICE for the full list of modifications.
 

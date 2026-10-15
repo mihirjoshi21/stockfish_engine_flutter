@@ -56,6 +56,14 @@ By Dale Weiler, public domain / Unlicense (see incbin/UNLICENCE).
 * Android: CMake now reads the NNUE file names from `evaluate.h`, downloads
   missing networks and verifies their SHA-256 prefix (the previous CMake file
   downloaded two obsolete network names that were never used).
+* Stockfish src/nnue/network.cpp: when STOCKFISH_EXTERNAL_NETS is defined
+  (Android builds only) the networks are referenced with INCBIN_EXTERN instead
+  of being embedded; they are embedded once in android/stockfish_nets.cpp
+  (libstockfish_nets.so). Without the macro the file behaves as before.
+* Android: arm64-v8a release builds ship an additional engine executable
+  without dot-product instructions (libstockfish_bin_compat.so), selected at
+  runtime from /proc/cpuinfo.
+* iOS: removed -flto=full and the dot-product flags from the Release build.
 * iOS: podspec license corrected from MIT to GPL-3.0, authors/homepage updated,
   and the nnue download script phases updated to the networks that
   `evaluate.h` actually requires (nn-7bf13f9655c8, nn-47fc8b7fff06). The FFI

@@ -5,7 +5,7 @@ simple UCI `stdin` / `stdout` API.
 
 | Platform | How the engine runs |
 | -------- | ------------------- |
-| Android  | **Separate process.** Stockfish is built as an executable named `libstockfish_bin.so`, extracted by the installer into `nativeLibraryDir`, and started with `Process.start`. |
+| Android  | **Separate process.** Stockfish is built as an executable (`libstockfish_bin.so`, plus `libstockfish_bin_compat.so` on arm64), extracted by the installer into `nativeLibraryDir`, and started with `Process.start`. The NNUE networks live once in the shared library `libstockfish_nets.so`. |
 | iOS      | In-process through Dart FFI (statically linked into the app). |
 | macOS    | Development convenience: a separate process built from the bundled sources on first use. |
 
@@ -71,14 +71,33 @@ is ready. Commands can only be sent in the `ready` state.
   with an explanatory log line.
 * Executing a file from `nativeLibraryDir` is permitted on all Android versions
   (the W^X restriction from Android 10 only affects the app's data directories).
-* The native library is built with 16 KB page alignment (Google Play
-  requirement).
+* **Native files per ABI** (all in `nativeLibraryDir`, all 16 KB page aligned,
+  a Google Play requirement):
+
+  | File | What it is |
+  | ---- | ---------- |
+  | `libstockfish_nets.so` | Shared library holding only the two NNUE networks (~93 MB, embedded with incbin). |
+  | `libstockfish_bin.so` | Engine executable. On arm64-v8a release builds it uses ARMv8.2 dot-product instructions (`-march=armv8.2-a+dotprod`). |
+  | `libstockfish_bin_compat.so` | arm64-v8a release builds only: same engine without dot product, for Cortex-A53/A72/A73-class CPUs (e.g. Snapdragon 625/660/835) that would crash with `SIGILL` on the dotprod build. |
+
+  The executables are linked against `libstockfish_nets.so` (found through
+  `DT_RUNPATH=$ORIGIN`, and `LD_LIBRARY_PATH` is also set when spawning), so the
+  networks are shipped once; the compat build adds well under 1 MB to the
+  download. armeabi-v7a, x86_64 and debug builds ship only `libstockfish_bin.so`
+  (no dotprod code there).
+* **Executable selection.** `libstockfish_bin.so` is used only if *every*
+  `Features` line in `/proc/cpuinfo` contains `asimddp`; otherwise
+  `libstockfish_bin_compat.so`. If the chosen file does not exist, the other
+  one is used. The choice is logged (`[STOCKFISH] ... using ...`).
 * The engine runs in its own process, so a crash in Stockfish cannot take the
   app down; the `state` becomes `StockfishState.error`.
 
 ### iOS notes
 
-`IPHONEOS_DEPLOYMENT_TARGET` must be 12.0 or newer.
+`IPHONEOS_DEPLOYMENT_TARGET` must be 12.0 or newer. The engine is linked into
+the app, so there is no runtime CPU dispatch: the Release build targets baseline
+ARMv8-A NEON (no dot product, which A11-and-older iPhones lack) and does not use
+LTO (with `-flto` the `.incbin` of the networks fails to find the files).
 
 ## Building from source
 
@@ -90,13 +109,13 @@ the engine at compile time with incbin.
 * **Android** – nothing to do. `android/CMakeLists.txt` downloads the two
   networks from `tests.stockfishchess.org` at configure time if they are not in
   `ios/Stockfish/src`, verifies each against the SHA-256 prefix in its file
-  name, and builds the `libstockfish_bin.so` executable for every ABI
-  (arm64-v8a also gets `-march=armv8.2-a+dotprod`). Requirements: Android SDK,
+  name, and builds `libstockfish_nets.so` and the engine executable(s) listed
+  under *Android notes* for every ABI. Requirements: Android SDK,
   NDK, and CMake 3.13+ (SDK-managed CMake 3.22.1 works). For offline builds,
   copy the two `.nnue` files into `ios/Stockfish/src/` first.
   ```sh
   cd example && flutter build apk --debug
-  unzip -l build/app/outputs/flutter-apk/app-debug.apk | grep libstockfish_bin
+  unzip -l build/app/outputs/flutter-apk/app-debug.apk | grep libstockfish_
   ```
 * **iOS** – `pod install` runs a script phase that downloads the same two
   networks into `ios/Stockfish/src` if missing.
